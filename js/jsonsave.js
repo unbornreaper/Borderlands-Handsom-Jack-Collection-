@@ -134,12 +134,75 @@
   }
   WB.jsonSave = { isJson, parse, build };
 
+  /* ---------- other PlayStation / tool layouts ---------- */
+  const B = WB.bytes;
+  const hex = (b, n = 16) => Array.from(b.subarray(0, n), (x) => x.toString(16).padStart(2, '0')).join(' ');
+  function utf16(bytes) {
+    if (bytes[0] === 0xFF && bytes[1] === 0xFE) return { le: true, bom: true };
+    if (bytes[0] === 0xFE && bytes[1] === 0xFF) return { le: false, bom: true };
+    if (bytes[0] === 0x7B && bytes[1] === 0x00) return { le: true, bom: false };
+    if (bytes[0] === 0x00 && bytes[1] === 0x7B) return { le: false, bom: false };
+    return null;
+  }
+  function decode16(bytes, u) {
+    const start = u.bom ? 2 : 0; let s = '';
+    for (let i = start; i + 1 < bytes.length; i += 2) s += String.fromCharCode(u.le ? bytes[i] | (bytes[i + 1] << 8) : (bytes[i] << 8) | bytes[i + 1]);
+    return s;
+  }
+  function encode16(text, u) {
+    const out = new Uint8Array((u.bom ? 2 : 0) + text.length * 2); let o = 0;
+    if (u.bom) { out[0] = u.le ? 0xFF : 0xFE; out[1] = u.le ? 0xFE : 0xFF; o = 2; }
+    for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); out[o++] = u.le ? c & 255 : c >> 8; out[o++] = u.le ? c >> 8 : c & 255; }
+    return out;
+  }
+  function looksLikeSavePB(b) {
+    try { const m = Msg.parse(b); const c = m.str(1); return /CharClass|^GD_|^Crocus|^Quince/.test(c) && m.has(2) ? true : false; } catch (e) { return false; }
+  }
+  async function tryAlternatives(b, firstErr) {
+    // 1) size-prefixed WSG without SHA-1 or compression
+    if (B.bytesToStr(b.subarray(4, 7)) === 'WSG') {
+      const r = await unwrap(b.subarray(4)); r.info.scheme = 'sizedwsg'; return r;
+    }
+    // 2) LZO / zlib without the SHA-1 header: [size][compressed]
+    if (b.length > 8) {
+      const fake = B.concat([new Uint8Array(20), b]);
+      try { const r = await unwrap(fake); r.info.outerScheme = r.info.scheme; r.info.scheme = 'nosha'; r.info.warning = null; return r; } catch (e) { /* next */ }
+    }
+    // 3) whole file zlib-compressed
+    if ((b[0] & 0x0F) === 8 && ((b[0] << 8) | b[1]) % 31 === 0) {
+      try {
+        const inner = await WB.zlib.inflate(b);
+        const r = await WB.save.unwrap(inner);
+        return { pb: r.pb, info: { scheme: 'zlibwrap', inner: r.info, little: r.info.little, sha1ok: true } };
+      } catch (e) { /* next */ }
+    }
+    // 4) bare protobuf (already fully decoded)
+    if (looksLikeSavePB(b)) return { pb: b.slice(), info: { scheme: 'raw', little: true, sha1ok: true } };
+    const e = new Error(`This file isn't a save layout the editor knows yet (${b.length} bytes, starts: ${hex(b, 8)}). Send it to the developer so support can be added.`);
+    e.cause = firstErr; throw e;
+  }
+
   // hook into the normal save loader/writer
   const unwrap = WB.save.unwrap, wrap = WB.save.wrap;
   WB.save.unwrap = async (file) => {
     const b = file instanceof Uint8Array ? file : new Uint8Array(file);
     if (isJson(b)) return parse(b);
-    return unwrap(b);
+    const u = utf16(b);
+    if (u) {
+      const r = parse(te.encode(decode16(b, u)));
+      r.info.utf16 = u; return r;
+    }
+    try { return await unwrap(b); } catch (e) { return tryAlternatives(b, e); }
   };
-  WB.save.wrap = async (pb, info) => (info.scheme === 'json' ? build(pb, info) : wrap(pb, info));
+  WB.save.wrap = async (pb, info) => {
+    if (info.scheme === 'json') {
+      const out = build(pb, info);
+      return info.utf16 ? encode16(td.decode(out), info.utf16) : out;
+    }
+    if (info.scheme === 'raw') return pb;
+    if (info.scheme === 'sizedwsg') { const w = await wrap(pb, { ...info, scheme: 'none' }); return B.concat([B.u32be(w.length), w]); }
+    if (info.scheme === 'nosha') return (await wrap(pb, { ...info, scheme: info.outerScheme })).subarray(20);
+    if (info.scheme === 'zlibwrap') return WB.zlib.deflate(await WB.save.wrap(pb, info.inner));
+    return wrap(pb, info);
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
