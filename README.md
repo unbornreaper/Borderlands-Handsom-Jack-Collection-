@@ -32,6 +32,7 @@ It runs in your browser. Nothing gets installed, and your save stays on your dev
 | 🧩 Part picker | Every part comes with a plain-English description and tags like `Less recoil`, `+Fire rate`, `+Crit damage`. You can use parts that fit the item, or **parts from any weapon** (modded) |
 | ⚡ Make it OP / ☢️ MODDED | One tap on any item. **OP** picks the best legit parts and rarity and sets it to your max level. **MODDED** stacks the strongest parts from any gun into every slot (damage, crit, fire rate) |
 | ★ Any slot | Fill empty slots, or put any part in any slot to stack extra bonuses |
+| 🧱 Stack a stat | Pick Max damage, Crit, Crazy fire rate, No recoil, Fast reload, Huge mag or Element power (one or several). Every free slot gets the strongest part for your picks. The describe box understands it too ("smg with crazy speed and no recoil") |
 | 🤖 Describe it | Type what you want ("legendary shock sniper with crazy crit, modded", "conference call", "fast smg that looks like jakobs") and the Forge builds it. Works offline, no AI account needed. 🎲 Re-roll for another match |
 | 🎒 Ammo & Space | Ammo SDUs and amounts, backpack and bank size, weapon slots |
 | 📜 Missions | Change any mission's status per playthrough, remove a mission so you can replay it, complete them all, add missing ones, or copy Normal mode progress to TVHM/UVHM |

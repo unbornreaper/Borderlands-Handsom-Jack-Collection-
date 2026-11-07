@@ -231,3 +231,6 @@ body.editing .platform { animation: none; }
 .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .seg button { flex: none; }
 @media (hover: none) { nav.tabs button:hover { background: none; color: var(--muted); } nav.tabs button.on:hover { color: var(--text); } }
+
+.stackgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.stackgrid .btn { white-space: normal; text-align: left; }

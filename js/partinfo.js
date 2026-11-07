@@ -269,5 +269,37 @@
     return v;
   }
 
-  WB.parts = { describe, slotLabel, makeOP, score };
+  /* ---------- stack one stat into every free slot ---------- */
+  const STACKS = {
+    damage: { label: '💥 Max damage', tags: ['++Damage', '+Damage'] },
+    crit: { label: '💀 Crit / headshots', tags: ['+Crit damage'] },
+    speed: { label: '⚡ Crazy fire rate', tags: ['+Fire rate'] },
+    recoil: { label: '🎯 No recoil', tags: ['Less recoil', '+Stability', '+Accuracy'] },
+    reload: { label: '🔄 Fast reload', tags: ['+Reload speed'] },
+    mag: { label: '📦 Huge mag', tags: ['+Magazine size'] },
+    element: { label: '🔥 Element power', tags: ['+Elemental damage', '+Elemental chance'] },
+  };
+  // stat: one key or a list of keys (slots are shared out between them)
+  function stack(v, game, stat) {
+    const stats = Array.isArray(stat) ? stat : [stat];
+    const pools = game.pools.weapon;
+    const all = [...new Set(['grip', 'sight', 'stock', 'accessory1', 'accessory2', 'barrel'].flatMap((s) => pools[s]))];
+    const statScore = (p, s, want) => {
+      const d = describe(p, s, true, game); let x = 0;
+      for (const t of d.tags) { const i = want.indexOf(t.t); if (i >= 0) x += 30 - i * 5; if (/^-/.test(t.t)) x -= 10; else if (!t.good) x -= 3; }
+      return x + score(p, s, true, game, null) * 0.2;
+    };
+    const slots = ['grip', 'sight', 'stock', 'accessory1', 'accessory2'];
+    if (!(v.parts.barrel && isUnique(v.parts.barrel, 'barrel', game))) slots.push('barrel');
+    let filled = 0;
+    slots.forEach((s, i) => {
+      const want = STACKS[stats[i % stats.length]].tags;
+      let best = null, bestSc = 0;
+      for (const p of all) { const x = statScore(p, s, want); if (x > bestSc && game.fits(v, s, p)) { best = p; bestSc = x; } }
+      if (best && bestSc >= 20) { v.parts[s] = best; filled++; }
+    });
+    return filled;
+  }
+
+  WB.parts = { describe, slotLabel, makeOP, score, stack, STACKS };
 })(typeof window !== 'undefined' ? window : globalThis);

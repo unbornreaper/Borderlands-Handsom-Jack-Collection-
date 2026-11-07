@@ -53,6 +53,10 @@
     for (const [re, k] of RARITY) if (re.test(t)) { w.rarity = k; break; }
     for (const [re, k] of STATS) if (re.test(t)) w.stats.push(k);
     w.modded = MODDED.test(t);
+    const KEY = { '+Damage': 'damage', '+Crit damage': 'crit', '+Fire rate': 'speed', 'Less recoil': 'recoil', '+Accuracy': 'recoil', '+Reload speed': 'reload', '+Magazine size': 'mag', '+Elemental chance': 'element' };
+    if (/\b(stack\w*|a lot of|lots of|tons of|so much|max\w*|crazy|insane|no recoil|zero recoil|super)\b/.test(t) && w.stats.length) {
+      w.stack = [...new Set(w.stats.map((x) => KEY[x]).filter(Boolean))]; w.modded = true;
+    }
     const lv = t.match(/\b(?:level|lvl|lv|l)\s*(\d{1,3})\b/) || t.match(/\b(\d{1,3})\s*(?:level|lvl)\b/);
     if (lv) w.level = Math.min(127, +lv[1]); else if (/\bmax(imum)? level\b/.test(t)) w.level = 'max';
     // a specific item by name ("conference call", "unkempt harold", "the bee")
@@ -118,7 +122,8 @@
     const slots = v.isWeapon ? ['grip', 'sight', 'stock', 'accessory1', 'accessory2', 'barrel'] : WB.items.ITEM_SLOTS.filter((s) => !['prefix', 'title', 'material'].includes(s));
     if (w.modded) WB.parts.makeOP(v, game, true);
     else WB.parts.makeOP(v, game, false);
-    if (w.stats.length) tuneForStats(v, game, w);
+    if (w.stats.length && v.isWeapon && w.stack) { WB.parts.stack(v, game, w.stack); }
+    else if (w.stats.length) tuneForStats(v, game, w);
     if (v.isWeapon && w.element) setElement(v, game, w, notes);
     if (!v.isWeapon && w.element && w.element !== 'none') setGearElement(v, game, w);
     game.autoPrefix(v);
@@ -127,7 +132,7 @@
     void slots;
     v.name = game.itemName(v); v.kind = game.kind(v); v.rarity = game.rarity(v);
 
-    const understood = [w.rarity, w.mfg, w.element, w.kind, ...w.stats, w.modded ? 'MODDED' : null, w.lookMfg ? 'looks: ' + w.lookMfg : null, w.level ? 'level ' + level : null].filter(Boolean);
+    const understood = [w.rarity, w.mfg, w.element, w.kind, ...w.stats, w.stack ? 'STACKED' : null, w.modded ? 'MODDED' : null, w.lookMfg ? 'looks: ' + w.lookMfg : null, w.level ? 'level ' + level : null].filter(Boolean);
     return { view: v, wish: w, understood, notes, choices: pool.length };
   }
 

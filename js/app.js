@@ -22,7 +22,7 @@
   }
   async function getGame(key) {
     if (st.games[key]) return st.games[key];
-    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=6');
+    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=8');
     return (st.games[key] = new WB.Game(window.WB_DATA[key]));
   }
   async function openFile(file) {
@@ -413,6 +413,7 @@
           ${card('Level', `<div class="row"><input type="range" min="1" max="${bl2() ? 99 : 80}" value="${v.level}" data-eset="level" data-live="ilvl"><input id="ilvl" type="number" class="no-grow" style="width:80px" min="0" max="127" value="${v.level}" data-eset="level"></div>
             <button class="btn small" data-act="lvlMe" style="margin-top:8px">Match my level (${st.model.level})</button>`, 'Item level controls its damage/stats.')}
           ${card('⚡ One-tap power', `<div class="row"><button class="btn gold" data-act="makeOP" data-m="0">Make it OP</button><button class="btn red" data-act="makeOP" data-m="1">☢️ MODDED</button></div>`, '<b>OP</b>: best legit parts, best rarity, your max level. <b>MODDED</b>: stacks the strongest parts from any gun into every slot (damage, crit, fire rate). Single-player fun; may be flagged online.')}
+          ${v.isWeapon ? card('🧱 Stack a stat', `<div class="stackgrid">${Object.entries(WB.parts.STACKS).map(([k, x]) => `<button class="btn small ${(e.stacks || []).includes(k) ? 'gold' : ''}" data-act="stack" data-s="${k}">${x.label}</button>`).join('')}</div>`, 'Tap one or more. Fills grip, sight, stock, both accessories (and the barrel, unless it\'s a legendary barrel) with the strongest parts for your picks, shared between them. Modded.') : ''}
           ${card('Manufacturer', `<select data-eset="manufacturer">${[...new Set(mfgs.concat(v.manufacturer ? [v.manufacturer] : []))].map((m) => `<option value="${esc(m)}" ${m === v.manufacturer ? 'selected' : ''}>${esc(last(m))}</option>`).join('')}</select>`, 'Changes who "made" it (affects some stats & looks).')}
         </div>
         <div class="group-title">Parts — tap one to swap it</div>
@@ -555,6 +556,16 @@
         openEditor(null, r.view, true); st.edit.wish = text; renderModal();
         toast('Understood: ' + (r.understood.join(' · ') || 'something cool') + (r.notes.length ? '  ' + r.notes.join(' ') : '') + (r.choices > 1 ? `  (🎲 ${r.choices} matches — Re-roll for another)` : ''));
       } catch (err) { toast(err.message, true); }
+    },
+    stack(el) {
+      const e = st.edit, k = el.dataset.s;
+      if (!e.orig) e.orig = JSON.parse(JSON.stringify(e.v.parts));
+      e.stacks = e.stacks || [];
+      e.stacks = e.stacks.includes(k) ? e.stacks.filter((x) => x !== k) : e.stacks.concat(k);
+      e.v.parts = JSON.parse(JSON.stringify(e.orig)); // start from the parts before stacking
+      let n = 0; if (e.stacks.length) n = WB.parts.stack(e.v, st.game, e.stacks);
+      st.game.autoPrefix(e.v); renderModal();
+      toast(e.stacks.length ? `Stacked ${e.stacks.map((x) => WB.parts.STACKS[x].label).join(' + ')} into ${n} slots — tap Apply to keep` : 'Stacking cleared');
     },
     pickAll(el) { st.picker.mode = +el.dataset.v; renderModal(); },
     makeOP(el) {
