@@ -263,7 +263,7 @@
       if (!cand.length) continue;
       const sc = (p) => score(p, s, w, game, modded ? FOCUS[s] : null) - (used.has(p) ? 4 : 0) + (pkg(p) === home ? 1 : 0);
       let best = cur, bestSc = cur ? sc(cur) : -99;
-      for (const p of cand) { const x = sc(p); if (x > bestSc) { best = p; bestSc = x; } }
+      for (const p of cand) { const x = sc(p); if (x > bestSc && game.fits(v, s, p)) { best = p; bestSc = x; } }
       if (best) { v.parts[s] = best; used.add(best); }
     }
     return v;

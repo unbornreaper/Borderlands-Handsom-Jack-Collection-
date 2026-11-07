@@ -177,6 +177,23 @@
       for (const s of w ? W_SLOTS : I_SLOTS) it.parts[s] = this.ref(pg, v.parts[s], set);
       return WB.items.encode(it);
     }
+    // pick the name prefix the game would show for the chosen parts
+    autoPrefix(v) {
+      const T = v.isWeapon ? this.D.weaponParts : this.D.itemParts, N = v.isWeapon ? this.D.weaponNames : this.D.itemNames;
+      const order = v.isWeapon ? ['accessory1', 'accessory2', 'elemental', 'grip', 'barrel', 'sight', 'stock', 'body'] : ['delta', 'alpha', 'beta', 'gamma', 'epsilon', 'eta', 'theta', 'zeta'];
+      for (const s of order) {
+        const P = v.parts[s] && T[v.parts[s]];
+        const pre = P && (P.prefixes || []).find((x) => N[x] && this.fits(v, 'prefix', x));
+        if (pre) { v.parts.prefix = pre; return; }
+      }
+    }
+    // can this part go in this slot without mixing two different DLC asset sets?
+    fits(v, slot, path) {
+      const w = v.isWeapon, pg = w ? 'WeaponParts' : 'ItemParts';
+      const pairs = [[w ? 'WeaponTypes' : 'ItemTypes', v.type], ['BalanceDefs', v.balance], ['Manufacturers', v.manufacturer]];
+      for (const s of w ? W_SLOTS : I_SLOTS) pairs.push([pg, s === slot ? path : v.parts[s]]);
+      return this.chooseSet(pairs) !== null;
+    }
     namePart(path, weapon) {
       if (!path) return null;
       const t = weapon ? this.D.weaponNames : this.D.itemNames;
@@ -267,6 +284,7 @@
       for (const s of (weapon ? W_SLOTS : I_SLOTS).slice(0, 9)) v.parts[s] = r.parts[s].length ? r.parts[s][r.parts[s].length - 1] : null;
       const vp = this.validParts(v);
       v.parts.title = vp.title[0] || null; v.parts.prefix = vp.prefix[0] || null;
+      this.autoPrefix(v);
       v.name = this.itemName(v); v.kind = this.kind(v); v.rarity = this.rarity(v);
       return v;
     }
