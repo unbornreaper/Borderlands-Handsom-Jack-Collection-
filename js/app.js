@@ -22,7 +22,7 @@
   }
   async function getGame(key) {
     if (st.games[key]) return st.games[key];
-    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=4');
+    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=5');
     return (st.games[key] = new WB.Game(window.WB_DATA[key]));
   }
   async function openFile(file) {
@@ -399,7 +399,7 @@
     const slots = v.isWeapon ? WB.items.WEAPON_SLOTS : WB.items.ITEM_SLOTS;
     const valid = G.validParts(v);
     const mfgs = v.isWeapon ? G.weaponBalance(v.balance).mfgs : G.itemBalance(v.balance).mfgs;
-    const shownSlots = slots.filter((s) => v.parts[s] || (valid[s] && valid[s].length));
+    const shownSlots = slots; // show every slot, even empty ones, so you can add parts
     host.innerHTML = `<div class="modal-bg" data-act="closeEdit"><div class="modal" data-stop="1">
       <header><h3 class="r-${v.rarity}" style="color:var(--rc)">${esc(v.name)}</h3><button class="x" data-act="closeEdit">✕</button></header>
       <div class="body">
@@ -407,6 +407,7 @@
         <div class="cards" style="margin-bottom:14px">
           ${card('Level', `<div class="row"><input type="range" min="1" max="${bl2() ? 99 : 80}" value="${v.level}" data-eset="level" data-live="ilvl"><input id="ilvl" type="number" class="no-grow" style="width:80px" min="0" max="127" value="${v.level}" data-eset="level"></div>
             <button class="btn small" data-act="lvlMe" style="margin-top:8px">Match my level (${st.model.level})</button>`, 'Item level controls its damage/stats.')}
+          ${card('⚡ One-tap power', `<div class="row"><button class="btn gold" data-act="makeOP" data-m="0">Make it OP</button><button class="btn red" data-act="makeOP" data-m="1">☢️ MODDED</button></div>`, '<b>OP</b>: best legit parts, best rarity, your max level. <b>MODDED</b>: stacks the strongest parts from any gun into every slot (damage, crit, fire rate). Single-player fun; may be flagged online.')}
           ${card('Manufacturer', `<select data-eset="manufacturer">${[...new Set(mfgs.concat(v.manufacturer ? [v.manufacturer] : []))].map((m) => `<option value="${esc(m)}" ${m === v.manufacturer ? 'selected' : ''}>${esc(last(m))}</option>`).join('')}</select>`, 'Changes who "made" it (affects some stats & looks).')}
         </div>
         <div class="group-title">Parts — tap one to swap it</div>
@@ -414,7 +415,7 @@
           const d = WB.parts.describe(v.parts[s], s, v.isWeapon, G);
           const fits = !v.parts[s] || (valid[s] || []).includes(v.parts[s]);
           return `<div class="slot" data-act="pick" data-slot="${s}"><div class="lbl">${esc(WB.parts.slotLabel(s, v.kind))} ${fits ? '' : '<span class="pill bad">modded</span>'}</div>
-            <div class="val">${esc(d.title)}</div><div class="tags">${d.tags.map((t) => `<span class="tagc ${t.good ? '' : 'neg'}">${esc(t.t)}</span>`).join('')}</div><div class="desc">${esc(d.long)}</div></div>`;
+            <div class="val">${v.parts[s] ? esc(d.title) : '<span class="muted">Empty — tap to add a part</span>'}</div><div class="tags">${d.tags.map((t) => `<span class="tagc ${t.good ? '' : 'neg'}">${esc(t.t)}</span>`).join('')}</div><div class="desc">${esc(d.long)}</div></div>`;
         }).join('')}</div>
       </div>
       <footer>
@@ -430,7 +431,10 @@
   function pickerHTML() {
     const p = st.picker, G = st.game, v = st.edit.v;
     const valid = G.validParts(v)[p.slot] || [];
-    const pool = p.all ? G.pools[v.isWeapon ? 'weapon' : 'item'][p.slot] || [] : valid;
+    const pools = G.pools[v.isWeapon ? 'weapon' : 'item'];
+    const nameSlot = p.slot === 'prefix' || p.slot === 'title';
+    const pool = p.mode === 2 && !nameSlot ? [...new Set(Object.entries(pools).filter(([k]) => k !== 'prefix' && k !== 'title').flatMap(([, l]) => l))].sort()
+      : p.mode >= 1 ? pools[p.slot] || [] : valid;
     const q = p.q.toLowerCase();
     const opts = [null].concat(pool).map((path) => ({ path, d: WB.parts.describe(path, p.slot, v.isWeapon, G) }))
       .filter((o) => !q || (o.d.title + ' ' + o.d.short + ' ' + (o.path || '')).toLowerCase().includes(q));
@@ -438,8 +442,9 @@
       <header><h3>Pick ${esc(WB.parts.slotLabel(p.slot, v.kind))}</h3><button class="x" data-act="closePick">✕</button></header>
       <div class="body">
         <div class="toolbar"><input type="search" placeholder="Search parts (e.g. recoil, damage, Jakobs)…" data-pset="q" value="${esc(p.q)}" autofocus>
-          <div class="seg"><button data-act="pickAll" data-v="0" class="${p.all ? '' : 'on'}">Fits this item (${valid.length})</button><button data-act="pickAll" data-v="1" class="${p.all ? 'on' : ''}">Any weapon (modded)</button></div></div>
-        ${p.all ? '<div class="warn">Parts from other guns/items can look or act weird and may be flagged in online play. Fun for single player!</div>' : ''}
+          <div class="seg"><button data-act="pickAll" data-v="0" class="${p.mode === 0 ? 'on' : ''}">Fits (${valid.length})</button><button data-act="pickAll" data-v="1" class="${p.mode === 1 ? 'on' : ''}">Any weapon</button>${nameSlot ? '' : `<button data-act="pickAll" data-v="2" class="${p.mode === 2 ? 'on' : ''}">Any slot ★</button>`}</div></div>
+        ${p.mode === 1 ? '<div class="warn">Parts from other guns/items can look or act weird and may be flagged in online play. Fun for single player!</div>' : ''}
+        ${p.mode === 2 ? '<div class="warn">★ Stack mode: put ANY part in this slot — e.g. a second damage accessory in the Sight or Stock slot — to pile up more bonuses. Very modded.</div>' : ''}
         <div class="plist">${opts.slice(0, 400).map((o) => `<button class="popt ${o.path === v.parts[p.slot] ? 'cur' : ''}" data-act="pickPart" data-p="${esc(o.path || '')}">
           <div class="t">${esc(o.d.title)} ${o.d.tags.map((t) => `<span class="tagc ${t.good ? '' : 'neg'}">${esc(t.t)}</span>`).join(' ')}</div>
           <div class="muted" style="font-size:12px">${esc(o.d.long)}</div>${o.path ? `<div class="p">${esc(o.path)}</div>` : ''}</button>`).join('')}</div>
@@ -529,8 +534,15 @@
     closeEdit(el, ev) { if (ev && ev.target.closest('[data-stop]') && !ev.target.closest('.x') && !ev.target.closest('.btn')) return; st.edit = null; renderModal(); },
     closePick(el, ev) { if (ev && ev.target.closest('[data-stop]') && !ev.target.closest('.x')) return; st.picker = null; renderModal(); },
     lvlMe() { st.edit.v.level = st.model.level; st.edit.v.stage = st.model.level; renderModal(); },
-    pick_slot(el) { st.picker = { slot: el.dataset.slot, q: '', all: false }; renderModal(); },
-    pickAll(el) { st.picker.all = el.dataset.v === '1'; renderModal(); },
+    pick_slot(el) { st.picker = { slot: el.dataset.slot, q: '', mode: 0 }; renderModal(); },
+    pickAll(el) { st.picker.mode = +el.dataset.v; renderModal(); },
+    makeOP(el) {
+      const v = st.edit.v; const modded = el.dataset.m === '1';
+      const lvl = Math.min(127, st.model.level + (bl2() ? st.model.opLevel : 0));
+      v.level = lvl; v.stage = lvl;
+      WB.parts.makeOP(v, st.game, modded);
+      renderModal(); toast(modded ? '☢️ MODDED — tap Apply to keep it' : '⚡ OP — tap Apply to keep it');
+    },
     pickPart(el) { st.edit.v.parts[st.picker.slot] = el.dataset.p || null; st.picker = null; renderModal(); },
     saveItem() {
       const e = st.edit;

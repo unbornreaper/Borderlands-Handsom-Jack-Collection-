@@ -30,6 +30,8 @@ It runs in your browser. Nothing gets installed, and your save stays on your dev
 | 🔫 Backpack & Bank | Search and filter your gear. Tap an item to change its **level, manufacturer and every part**. Duplicate, delete, favorite, move between backpack and bank, copy its code |
 | 🛠️ Weapon Forge | Spawn any weapon, shield, grenade, class mod or relic in the game (about 1,600 in BL2 and 1,400 in TPS), then customize it |
 | 🧩 Part picker | Every part comes with a plain-English description and tags like `Less recoil`, `+Fire rate`, `+Crit damage`. You can use parts that fit the item, or **parts from any weapon** (modded) |
+| ⚡ Make it OP / ☢️ MODDED | One tap on any item. **OP** picks the best legit parts and rarity and sets it to your max level. **MODDED** stacks the strongest parts from any gun into every slot (damage, crit, fire rate) |
+| ★ Any slot | Fill empty slots, or put any part in any slot to stack extra bonuses |
 | 🎒 Ammo & Space | Ammo SDUs and amounts, backpack and bank size, weapon slots |
 | 📜 Missions | Change any mission's status per playthrough, remove a mission so you can replay it, complete them all, add missing ones, or copy Normal mode progress to TVHM/UVHM |
 | 🗺️ Fast Travel | Unlock any or all stations, including DLC |

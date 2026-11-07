@@ -221,5 +221,53 @@
     'Oz Kit': { alpha: 'Bonus 1', beta: 'Bonus 2', gamma: 'Bonus 3', delta: 'Bonus 4', eta: 'Kit Type', theta: 'Strength' },
   };
   function slotLabel(slot, kind) { return (GEAR_LABELS[kind] && GEAR_LABELS[kind][slot]) || SLOT_LABEL[slot] || slot; }
-  WB.parts = { describe, slotLabel };
+  /* ---------- "make it OP" ---------- */
+  const W = { '++Damage': 9, '+Damage': 7, '+Crit damage': 6, '+Fire rate': 5, '+Elemental damage': 5, '+Elemental chance': 4, '+Magazine size': 3,
+    '+Accuracy': 3, 'Less recoil': 3, '+Stability': 2, '+Reload speed': 3, '+Projectile speed': 1, '+Melee damage': 1, 'Bullets pierce': 4, '+Recharge rate': 3, '+Capacity': 4, 'Shorter delay': 2 };
+  function score(path, slot, isWeapon, game, focus) {
+    if (!path) return -1;
+    const d = describe(path, slot, isWeapon, game), s = last(path).toLowerCase();
+    let sc = 0;
+    for (const t of d.tags) { sc += W[t.t] || 0; if (/^-/.test(t.t)) sc -= 4; if (focus && t.t === focus) sc += 6; }
+    const tier = (s.match(/_(\d)(_|$)/) || [])[1]; if (tier && (slot === 'material' || /material|mat_/.test(s))) sc += Number(tier) * 3 + (/legendary/.test(s) ? 3 : 0);
+    const g = s.match(/grade_?(\d+)|_c(\d)|_b(\d)|_a(\d)/g);
+    if (g) sc += g.map((x) => +x.replace(/\D/g, '')).reduce((a, b) => a + b, 0) * 2;
+    if (/legendary/.test(s)) sc += 5;
+    if (/none$|_none/.test(s)) sc -= 3;
+    return sc;
+  }
+  const isUnique = (path, slot, game) => /Unique|Special|E-tech/.test(describe(path, slot, true, game).short);
+  // focus = which stat each slot should push in modded mode, so bonuses stack instead of repeating
+  const FOCUS = { grip: '+Damage', sight: '+Crit damage', stock: '+Fire rate', accessory1: '+Damage', accessory2: '+Crit damage', elemental: '+Damage' };
+  function makeOP(v, game, modded) {
+    const w = v.isWeapon;
+    const slots = w ? WB.items.WEAPON_SLOTS : WB.items.ITEM_SLOTS;
+    const valid = game.validParts(v);
+    const pools = game.pools[w ? 'weapon' : 'item'];
+    const pkg = (p) => (p || '').split('.')[0];
+    const home = pkg(v.parts.body || v.parts.barrel || v.parts.alpha || v.balance);
+    const used = new Set();
+    const allStack = modded && w ? [...new Set(['grip', 'sight', 'stock', 'accessory1', 'accessory2', 'barrel'].flatMap((s) => pools[s]))] : [];
+    for (const s of slots) {
+      if (s === 'prefix' || s === 'title') continue;
+      const cur = v.parts[s];
+      if (w && s === 'barrel' && cur && isUnique(cur, s, game)) continue; // keep the legendary ability
+      if (w && s === 'body') continue; // body sets the gun's frame; swapping breaks the look
+      if (w && s === 'elemental') { if (!cur || /none/i.test(cur)) { const el = (valid.elemental || []).find((p) => !/none/i.test(p)); if (el) v.parts.elemental = el; } continue; }
+      let cand;
+      if (!modded) cand = valid[s] || [];
+      else if (w && FOCUS[s] && s !== 'elemental') cand = allStack; else {
+        const same = (pools[s] || []).filter((p) => pkg(p) === pkg(cur) || pkg(p) === home);
+        cand = same.length ? same : (valid[s] || []);
+      }
+      if (!cand.length) continue;
+      const sc = (p) => score(p, s, w, game, modded ? FOCUS[s] : null) - (used.has(p) ? 4 : 0) + (pkg(p) === home ? 1 : 0);
+      let best = cur, bestSc = cur ? sc(cur) : -99;
+      for (const p of cand) { const x = sc(p); if (x > bestSc) { best = p; bestSc = x; } }
+      if (best) { v.parts[s] = best; used.add(best); }
+    }
+    return v;
+  }
+
+  WB.parts = { describe, slotLabel, makeOP, score };
 })(typeof window !== 'undefined' ? window : globalThis);
