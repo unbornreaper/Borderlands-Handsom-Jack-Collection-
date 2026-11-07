@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>WBWHO JACKED — Borderlands Handsome Jack Collection Save Editor</title>
+  <meta name="description" content="WBWHO JACKED: a free, simple, in-browser save editor for Borderlands 2 and The Pre-Sequel (Handsome Jack Collection). Money, Eridium, levels, weapons, parts, missions, outfits, vehicles and more.">
+  <meta name="theme-color" content="#05050a">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="rgb-glow"></div>
+  <div class="grid-floor"></div>
+  <div class="vignette"></div>
+
+  <div class="platform-wrap">
+    <div class="platform">
+      <header class="top">
+        <img class="logo" src="assets/logo.svg" alt="">
+        <div class="brand">
+          <h1><span class="w">WBWHO</span> JACKED</h1>
+          <small>Save forge · Borderlands: The Handsome Jack Collection</small>
+        </div>
+        <div class="spacer"></div>
+        <div id="fileChips" class="row no-grow"></div>
+      </header>
+      <div id="app"></div>
+    </div>
+    <footer class="credits">
+      WBWHO JACKED runs 100% in your browser — your save never leaves your device.<br>
+      Built on the open research of Gibbed (asset data), apocalyptech &amp; the BL2 modding community. Not affiliated with Gearbox or 2K.
+    </footer>
+  </div>
+
+  <div id="savebar" class="savebar hidden">
+    <div class="info" id="saveInfo"></div>
+    <button class="btn small" id="undoBtn" title="Undo last change">↶ Undo</button>
+    <button class="btn small" id="newFileBtn" title="Open another file">Open</button>
+    <button class="btn gold" id="downloadBtn">⬇ Download save</button>
+  </div>
+  <input type="file" id="fileInput" class="hidden" accept=".sav,.bin,.SAV,.BIN,application/octet-stream">
+
+  <script src="js/core.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/partinfo.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

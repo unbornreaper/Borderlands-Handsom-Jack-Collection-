@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="WBWHO Jacked logo">
+  <defs>
+    <linearGradient id="rgb" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff3d6e"/>
+      <stop offset="0.25" stop-color="#ffcc00"/>
+      <stop offset="0.5" stop-color="#3dff9a"/>
+      <stop offset="0.75" stop-color="#3dd5ff"/>
+      <stop offset="1" stop-color="#b05cff"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe680"/>
+      <stop offset="1" stop-color="#ff9d00"/>
+    </linearGradient>
+  </defs>
+  <!-- vault-style hex badge -->
+  <path d="M60 4 108 32v56L60 116 12 88V32Z" fill="#0b0b14" stroke="url(#rgb)" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M60 18 96 39v42L60 102 24 81V39Z" fill="none" stroke="#ffffff22" stroke-width="2"/>
+  <!-- the "W" (WhiteBoy) with a mask-like visor cut, nod to Handsome Jack -->
+  <path d="M28 40h12l8 30 8-24h8l8 24 8-30h12L80 84H70l-10-28-10 28H40Z" fill="url(#gold)"/>
+  <!-- Jack's scar notch -->
+  <path d="M66 22 74 36" stroke="#ff3d6e" stroke-width="4" stroke-linecap="round"/>
+  <text x="60" y="100" text-anchor="middle" font-family="Impact, 'Arial Black', sans-serif" font-size="13" letter-spacing="2" fill="#fff">WBWHO</text>
+</svg>
