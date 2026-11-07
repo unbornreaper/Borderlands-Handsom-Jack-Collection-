@@ -301,5 +301,46 @@
     return filled;
   }
 
-  WB.parts = { describe, slotLabel, makeOP, score, stack, STACKS };
+  /* ---------- stat profile (estimate from parts) ---------- */
+  const PROFILE_W = [
+    ['damage', 'Damage', '💥', [[/^\+\+damage/, 2], [/^\+damage/, 1], [/^-damage/, -1]]],
+    ['crit', 'Crit damage', '💀', [[/^\+crit/, 1]]],
+    ['rate', 'Fire rate', '⚡', [[/^\+fire rate/, 1], [/^-fire rate/, -1]]],
+    ['control', 'Accuracy / low recoil', '🎯', [[/^\+accuracy/, 1], [/^less recoil/, 1], [/^\+stability/, 0.5], [/^less sway/, 0.5], [/^more spread/, -1]]],
+    ['mag', 'Magazine', '📦', [[/^\+magazine/, 1]]],
+    ['reload', 'Reload speed', '🔄', [[/^\+reload/, 1]]],
+    ['element', 'Element', '🔥', [[/^\+elemental/, 1], [/ element$/, 1]]],
+    ['melee', 'Melee', '🗡️', [[/^\+melee/, 1]]],
+  ];
+  const GEAR_W = [
+    ['damage', 'Damage', '💥', [[/^\+damage/, 1], [/^\+element damage/, 0.5]]],
+    ['capacity', 'Capacity', '🛡️', [[/capacity/, 1], [/^shield body/, 0.5]]],
+    ['recharge', 'Recharge', '🔋', [[/recharge/, 1], [/shorter delay/, 0.5]]],
+    ['special', 'Special effects', '✨', [[/spike|roid|absorb|booster|nova|amp|resist|child|blast|skill|bonus|type|throw/, 1]]],
+  ];
+  const RARITY_MULT = { white: 1, green: 1.08, blue: 1.16, purple: 1.25, etech: 1.35, legendary: 1.45, seraph: 1.45, pearl: 1.6, effervescent: 1.6, glitch: 1.5 };
+  function profile(v, game) {
+    const w = v.isWeapon, defs = w ? PROFILE_W : GEAR_W;
+    const out = {}; defs.forEach(([k, label, ic]) => (out[k] = { label, ic, val: 0 }));
+    let element = null, uniqueAbility = false;
+    for (const [slot, p] of Object.entries(v.parts)) {
+      if (!p || slot === 'prefix' || slot === 'title') continue;
+      const d = describe(p, slot, w, game);
+      for (const t of d.tags) {
+        const tl = t.t.toLowerCase();
+        if (/unique barrel|e-tech/.test(tl)) uniqueAbility = true;
+        if (w && / element$/.test(tl) && !/^no /.test(tl)) element = t.t.replace(/ element$/, '');
+        for (const [k, , , rules] of defs) for (const [re, pts] of rules) if (re.test(tl)) {
+          const g = +(tl.match(/(\d+)$/) || [])[1];
+          out[k].val += pts * (w || !g ? 1 : Math.max(0.5, g / 3));
+        }
+      }
+    }
+    const rarity = game.rarity(v);
+    const bonus = Object.values(out).reduce((a, x) => a + Math.max(0, x.val), 0);
+    const power = Math.round((v.level || 1) * 10 * (RARITY_MULT[rarity] || 1) * (1 + 0.06 * bonus) * (uniqueAbility ? 1.1 : 1));
+    return { stats: out, element, uniqueAbility, power, rarity };
+  }
+
+  WB.parts = { describe, slotLabel, makeOP, score, stack, STACKS, profile };
 })(typeof window !== 'undefined' ? window : globalThis);

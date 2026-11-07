@@ -22,7 +22,7 @@
   }
   async function getGame(key) {
     if (st.games[key]) return st.games[key];
-    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=8');
+    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=9');
     return (st.games[key] = new WB.Game(window.WB_DATA[key]));
   }
   async function openFile(file) {
@@ -382,13 +382,29 @@
     const v = e.view;
     return `<div class="item r-${v.rarity}" data-act="edit" data-f="${e.field}" data-i="${e.idx}">
       <div class="badges">${e.equipped ? '<span class="pill good">E</span>' : ''}${e.where === 'bank' ? '<span class="pill">Bank</span>' : ''}${e.mark === 2 ? '<span class="pill">★</span>' : ''}</div>
-      <div class="nm">${esc(v.name)}</div><div class="meta">${esc(humanize(v.kind))} · ${esc(v.mfgName)} · Lv ${v.level}</div></div>`;
+      <div class="nm">${esc(v.name)}</div><div class="meta">${esc(humanize(v.kind))} · ${esc(v.mfgName)} · Lv ${v.level} · ⚡${fmt(WB.parts.profile(v, st.game).power)}</div></div>`;
   }
 
   /* ================= item editor modal ================= */
+  function statsCard(v, e) {
+    const P = WB.parts.profile(v, st.game);
+    const B = e.base ? WB.parts.profile(e.base, st.game) : null;
+    const rows = Object.entries(P.stats).filter(([k, x]) => x.val !== 0 || (B && B.stats[k].val !== 0)).map(([k, x]) => {
+      const before = B ? B.stats[k].val : null, diff = before === null ? 0 : x.val - before;
+      const pct = Math.max(0, Math.min(100, (x.val / 6) * 100));
+      return `<div style="margin:6px 0"><div class="row" style="font-size:13px"><span>${x.ic} ${esc(x.label)}</span><span class="no-grow" style="font-weight:800">${x.val > 0 ? '+' : ''}${Math.round(x.val * 10) / 10}${diff ? ` <span style="color:${diff > 0 ? 'var(--good)' : 'var(--bad)'}">${diff > 0 ? '▲' : '▼'}${Math.round(Math.abs(diff) * 10) / 10}</span>` : ''}</span></div><div class="progress"><i style="width:${pct}%${x.val < 0 ? ';background:var(--bad)' : ''}"></i></div></div>`;
+    }).join('');
+    const pd = B ? P.power - B.power : 0;
+    return `<div class="card" style="margin-bottom:14px"><h3>📊 Stats</h3>
+      <div class="row" style="align-items:flex-end"><div><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1px">Power score</div><div class="big-num">${fmt(P.power)}${pd ? ` <span style="font-size:15px;color:${pd > 0 ? 'var(--good)' : 'var(--bad)'}">${pd > 0 ? '▲' : '▼'}${fmt(Math.abs(pd))}</span>` : ''}</div></div>
+        <div class="no-grow" style="text-align:right;font-size:13px">Lv <b>${v.level}</b> · ${esc(RAR[P.rarity] || P.rarity)}${P.element ? ' · ' + esc(P.element) : ''}${P.uniqueAbility ? '<br><span class="pill good">Special ability</span>' : ''}</div></div>
+      ${rows || '<div class="muted" style="font-size:13px;margin-top:8px">No bonus parts yet — try Make it OP or Stack a stat.</div>'}
+      <div class="hint">Numbers count how many parts boost each stat (+1 ≈ one bonus part). Power score is a WBWHO estimate from level, rarity and parts — not the in-game damage number.${e.base ? ' ▲▼ = change since you opened it.' : ''}</div></div>`;
+  }
   function openEditor(entry, view, isNew) {
     st.edit = { entry, isNew, v: JSON.parse(JSON.stringify({ ...view, it: undefined })), it: view.it, where: entry ? entry.where : 'backpack' };
     if (st.edit.v.level === undefined) st.edit.v.level = st.model.level;
+    st.edit.base = isNew ? null : JSON.parse(JSON.stringify(st.edit.v));
     renderModal();
   }
   function editView() {
@@ -409,6 +425,7 @@
       <header><h3 class="r-${v.rarity}" style="color:var(--rc)">${esc(v.name)}</h3><button class="x" data-act="closeEdit">✕</button></header>
       <div class="body">
         <div class="row" style="margin-bottom:12px"><span class="chip">${esc(humanize(v.kind))}</span><span class="chip">🏭 ${esc(v.mfgName || '—')}</span><span class="chip r-${v.rarity}" style="color:var(--rc)">${esc(RAR[v.rarity] || v.rarity)}</span></div>
+        ${statsCard(v, e)}
         <div class="cards" style="margin-bottom:14px">
           ${card('Level', `<div class="row"><input type="range" min="1" max="${bl2() ? 99 : 80}" value="${v.level}" data-eset="level" data-live="ilvl"><input id="ilvl" type="number" class="no-grow" style="width:80px" min="0" max="127" value="${v.level}" data-eset="level"></div>
             <button class="btn small" data-act="lvlMe" style="margin-top:8px">Match my level (${st.model.level})</button>`, 'Item level controls its damage/stats.')}
