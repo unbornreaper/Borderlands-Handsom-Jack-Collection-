@@ -5,6 +5,8 @@ It runs in your browser. Nothing gets installed, and your save stays on your dev
 
 ![logo](assets/logo.svg)
 
+**▶ Open the editor:** https://unbornreaper.github.io/Borderlands-Handsom-Jack-Collection-/
+
 ## How to use it
 
 1. **Back up** your save folder first.
