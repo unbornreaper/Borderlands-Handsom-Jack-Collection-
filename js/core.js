@@ -262,6 +262,7 @@
       if (b.length < 28) throw new Error('File too small to be a Borderlands save.');
       info.sha1ok = eq(sha1(b.subarray(20)), b.subarray(0, 20));
       const usize = readU32(b, 20, false);
+      if (usize > 0x4000000 || usize < 16) throw new Error('This file is not a Borderlands save this editor understands. (PlayStation/Xbox saves must be decrypted first.)');
       const body = b.subarray(24);
       const blocks = [];
       if (usize <= BLOCK) blocks.push({ data: body, size: usize });
@@ -291,6 +292,7 @@
     if (!info.little && readU32(inner, o, false) !== 2) throw new Error('Unknown save version.');
     const crc = readU32(inner, o + 4, info.little);
     const size = readU32(inner, o + 8, info.little);
+    if (size > 0x4000000) throw new Error('Save looks damaged (bad size).');
     const pb = huffDecode(inner.subarray(o + 12), size);
     if (crc32(pb) !== crc) throw new Error('Save checksum (CRC) failed - file is damaged.');
     if (!info.sha1ok) info.warning = 'SHA-1 header did not match (file was probably edited before). It will be fixed on save.';

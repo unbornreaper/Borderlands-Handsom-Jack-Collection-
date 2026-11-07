@@ -125,7 +125,7 @@
     document.body.classList.toggle('editing', !!st.kind);
     const app = $('#app');
     if (!st.kind) { app.innerHTML = landing(); return; }
-    const tabs = st.kind === 'save' ? SAVE_TABS : PROFILE_TABS;
+    const tabs = st.kind === 'save' ? SAVE_TABS.filter(([k]) => !(k === 'vehicles' && st.model.info.scheme === 'json')) : PROFILE_TABS;
     const views = st.kind === 'save' ? VIEWS : PVIEWS;
     let body;
     try { body = views[st.tab](); } catch (e) { console.error(e); body = `<div class="warn">This section hit an error: ${esc(e.message)}</div>`; }
@@ -366,7 +366,7 @@
     info() {
       const m = st.model; const i = m.info;
       return sec('File Info', 'What WBWHO detected about this file.') + `<div class="cards">${card('📄 File', [
-        ['Name', st.fileName], ['Game', st.game.D.title], ['Format', { lzo: 'PC (LZO)', zlib: 'PS3 / Vita / Android (zlib)', none: 'Switch / raw' }[i.scheme] || i.scheme], ['Byte order', i.little ? 'Little endian' : 'Big endian (PS3 / 360)'], ['Header hash', i.sha1ok ? 'OK' : 'Mismatch (will be fixed)'], ['Size', fmt(st.original.length) + ' bytes'],
+        ['Name', st.fileName], ['Game', st.game.D.title], ['Format', { lzo: 'PC (LZO)', zlib: 'PS3 / Vita / Android (zlib)', none: 'Switch / raw', json: 'PlayStation JSON (decrypted)' }[i.scheme] || i.scheme], ['Byte order', i.little ? 'Little endian' : 'Big endian (PS3 / 360)'], ['Header hash', i.sha1ok ? 'OK' : 'Mismatch (will be fixed)'], ['Size', fmt(st.original.length) + ' bytes'],
       ].map(([a, b]) => `<div class="stat-row"><span class="muted">${a}</span><b>${esc(b)}</b></div>`).join(''))}
         ${card('🛟 Backup', '<button class="btn" data-act="backup">Download untouched original</button>', 'Keep this in case anything goes wrong.')}</div>`;
     },

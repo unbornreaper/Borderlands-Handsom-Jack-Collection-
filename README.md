@@ -45,6 +45,7 @@ You can **undo** any change (button or Ctrl+Z), and the File Info tab lets you d
 
 - PC / Steam saves (LZO). This is the main target.
 - Decrypted PS3, Vita and Android saves (zlib), raw Switch-style saves, and big-endian PS3/360 saves. The format is detected automatically.
+- Decrypted PlayStation saves exported as JSON text (key names like `player_class`, `packed_weapon_data`). They're written back in exactly the same JSON layout.
 - PS4 and Xbox One saves are encrypted by the console. Export a decrypted save first with Save Wizard or a similar tool.
 
 ## Put it online (GitHub Pages)
