@@ -22,7 +22,7 @@
   }
   async function getGame(key) {
     if (st.games[key]) return st.games[key];
-    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=10');
+    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=11');
     return (st.games[key] = new WB.Game(window.WB_DATA[key]));
   }
   async function openFile(file) {
@@ -42,6 +42,7 @@
       render();
       toast('Loaded ' + st.model.charName + ' — ' + st.model.className + ' (' + game.D.title + ')');
       if (unwrapped.info.warning) toast(unwrapped.info.warning);
+      if (st.model.repairs && st.model.repairs.length) { st.changes++; toast('🛠 Fixed settings that break the game: ' + st.model.repairs.join(', ') + '. Download to save the fix.'); }
     } catch (e) {
       console.error(e); render(); toast(e.message || String(e), true);
     } finally { busy(null); }
@@ -281,8 +282,8 @@
       return sec('Ammo & Space', 'Black Market upgrades (SDUs), ammo, backpack and bank size.') +
         `<div class="toolbar"><button class="btn gold" data-act="preset" data-p="maxAmmo">Max everything</button></div>
         <div class="cards">
-          ${card('🎒 Backpack slots', `<div class="row"><input type="number" min="12" max="200" value="${sl.backpack}" data-set="backpack"><button class="btn small no-grow" data-act="setVal" data-k="backpack" data-v="39">39 (max)</button></div>`, 'Normal max is 39. Bigger works but is "modded".')}
-          ${card('🏦 Bank slots', `<div class="row"><input type="number" min="6" max="200" value="${sl.bank}" data-set="bank"><button class="btn small no-grow" data-act="setVal" data-k="bank" data-v="24">24 (max)</button></div>`, 'Normal max is 24.')}
+          ${card('🎒 Backpack slots', `<div class="row"><input type="number" min="12" max="39" value="${sl.backpack}" data-set="backpack"><button class="btn small no-grow" data-act="setVal" data-k="backpack" data-v="39">39 (max)</button></div>`, 'Max is 39. Going higher can make the game wipe your inventory, so the editor stops at 39.')}
+          ${card('🏦 Bank slots', `<div class="row"><input type="number" min="6" max="24" value="${sl.bank}" data-set="bank"><button class="btn small no-grow" data-act="setVal" data-k="bank" data-v="24">24 (max)</button></div>`, 'Normal max is 24.')}
           ${card('🔫 Weapon slots', `<select data-set="weaponSlots">${[2, 3, 4].map((n) => `<option ${sl.weapons === n ? 'selected' : ''}>${n}</option>`).join('')}</select>`, 'How many guns you can equip (4 = all slots).')}
         </div>
         <div class="group-title">Ammo</div><div class="list">${m.ammo.map((a) => `<div class="li"><div class="grow"><div class="ttl">${esc(a.label)}</div><div class="sm">SDU level ${bm[a.key] || 0}/7 · max ${fmt(a.max[Math.min(7, bm[a.key] || 0)])}</div></div>

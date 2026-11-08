@@ -325,6 +325,7 @@
       this.tps = game.key === 'tps';
       this._extractExpansion();
       this.stageZero = this._detectStageZero();
+      this.repairs = this._repairLimits();
     }
     // PS4/PS5 saves keep the item's second level field ("game stage") at 0; PC saves copy the level.
     // New and edited items must follow the save's own pattern or the game throws them away.
@@ -335,6 +336,14 @@
         try { const it = WB.items.decode(Msg.parse(x.v).get(1)); if (it.grade > 1) { total++; if (it.stage === 0) zero++; } } catch (e) { /* skip */ }
       }
       return total > 0 ? zero * 2 > total : this.info.scheme === 'json';
+    }
+    // fix values left by older versions of the editor that break the game
+    _repairLimits() {
+      const notes = [];
+      const sl = this.slots, bm = this.root.packed(36);
+      if (sl.backpack > 39 || (bm[7] || 0) > 9) { this.setBackpack(Math.min(39, sl.backpack)); notes.push('backpack size ' + sl.backpack + ' → ' + this.slots.backpack); }
+      if (sl.bank > 24 || (bm[8] || 0) > 9) { this.setBank(Math.min(24, sl.bank)); notes.push('bank size ' + sl.bank + ' → ' + this.slots.bank); }
+      return notes;
     }
     applyStage(v) { v.stage = this.stageZero ? 0 : v.level; return v; }
     static detectGame(pb) {
@@ -462,7 +471,7 @@
     get blackMarket() { const v = this.root.packed(36); const o = {}; this.bmKeys.forEach((k, i) => (o[k] = v[i] || 0)); return o; }
     setBlackMarket(key, lvl) {
       const v = this.root.packed(36); while (v.length < this.bmKeys.length) v.push(0);
-      v[this.bmKeys.indexOf(key)] = Math.max(0, Math.min(key === 'bank' ? 255 : 255, lvl | 0));
+      v[this.bmKeys.indexOf(key)] = Math.max(0, Math.min(key === 'backpack' || key === 'bank' ? 9 : 7, lvl | 0));
       this.root.setPacked(36, v);
     }
     get ammo() {
@@ -485,13 +494,14 @@
       for (const a of this.ammo) this.setAmmo(a.key, a.max[7], 7);
     }
     get slots() { const s = this.root.msg(13) || new Msg([]); return { backpack: s.num(1, 12), weapons: s.num(2, 2), flourished: s.num(3, 0), bank: this.root.num(56, 6) }; }
+    // capped at the game's real limits: oversized backpacks/banks can make the game wipe the inventory
     setBackpack(size) {
-      const sdu = Math.max(0, Math.ceil((size - 12) / 3));
+      const sdu = Math.max(0, Math.min(9, Math.ceil(((size | 0) - 12) / 3)));
       const s = this.root.msg(13) || new Msg([]); s.set(1, 12 + sdu * 3, 0); this.root.set(13, s.encode(), 2);
       this.setBlackMarket('backpack', sdu);
     }
     setBank(size) {
-      const sdu = Math.max(0, Math.min(255, Math.ceil((size - 6) / 2)));
+      const sdu = Math.max(0, Math.min(9, Math.ceil(((size | 0) - 6) / 2)));
       this.root.set(56, 6 + sdu * 2, 0); this.setBlackMarket('bank', sdu);
     }
     setWeaponSlots(n) {
