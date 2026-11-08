@@ -22,7 +22,7 @@
   }
   async function getGame(key) {
     if (st.games[key]) return st.games[key];
-    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=12');
+    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=13');
     return (st.games[key] = new WB.Game(window.WB_DATA[key]));
   }
   async function openFile(file) {
@@ -36,7 +36,8 @@
       catch (e) { try { openProfile(bytes, file.name); return; } catch (e2) { throw e; } }
       const key = WB.SaveModel.detectGame(unwrapped.pb);
       const game = await getGame(key);
-      st.kind = 'save'; st.game = game; st.model = new WB.SaveModel(unwrapped.pb, unwrapped.info, game);
+      st.kind = 'save'; st.game = game; game.safeParts = unwrapped.info.scheme === 'json';
+      st.model = new WB.SaveModel(unwrapped.pb, unwrapped.info, game);
       st.profile = null; st.fileName = file.name; st.original = bytes; st.history = []; st.changes = 0;
       if (!['quick', 'character', 'money', 'skills', 'gear', 'forge', 'ammo', 'missions', 'travel', 'outfits', 'vehicles', 'challenges', 'codes', 'info'].includes(st.tab)) st.tab = 'quick';
       render();
@@ -437,8 +438,11 @@
         <div class="cards" style="margin-bottom:14px">
           ${card('Level', `<div class="row"><input type="range" min="1" max="${bl2() ? 99 : 80}" value="${v.level}" data-eset="level" data-live="ilvl"><input id="ilvl" type="number" class="no-grow" style="width:80px" min="0" max="127" value="${v.level}" data-eset="level"></div>
             <button class="btn small" data-act="lvlMe" style="margin-top:8px">Match my level (${st.model.level})</button>`, 'Item level controls its damage/stats.')}
-          ${card('⚡ One-tap power', `<div class="row"><button class="btn gold" data-act="makeOP" data-m="0">Make it OP</button><button class="btn red" data-act="makeOP" data-m="1">☢️ MODDED</button></div>`, '<b>OP</b>: best legit parts, best rarity, your max level. <b>MODDED</b>: stacks the strongest parts from any gun into every slot (damage, crit, fire rate). Single-player fun; may be flagged online.')}
-          ${v.isWeapon ? card('🧱 Stack a stat', `<div class="stackgrid">${Object.entries(WB.parts.STACKS).map(([k, x]) => `<button class="btn small ${(e.stacks || []).includes(k) ? 'gold' : ''}" data-act="stack" data-s="${k}">${x.label}</button>`).join('')}</div>`, 'Tap one or more. Fills grip, sight, stock, both accessories (and the barrel, unless it\'s a legendary barrel) with the strongest parts for your picks, shared between them. Modded.') : ''}
+          ${card('⚡ One-tap power', st.game.safeParts
+            ? `<div class="row"><button class="btn gold" data-act="makeOP" data-m="0">⚡ Make it OP</button></div>`
+            : `<div class="row"><button class="btn gold" data-act="makeOP" data-m="0">Make it OP</button><button class="btn red" data-act="makeOP" data-m="1">☢️ MODDED</button></div>`,
+            st.game.safeParts ? '🎮 <b>PlayStation-safe:</b> best parts this gun can really have, best rarity, your level. (Your PS5 deletes guns with parts from other guns, so MODDED is off for this save.)' : '<b>OP</b>: best legit parts, best rarity, your max level. <b>MODDED</b>: stacks the strongest parts from any gun into every slot (damage, crit, fire rate). Single-player fun; may be flagged online.')}
+          ${v.isWeapon ? card('🧱 Stack a stat', `<div class="stackgrid">${Object.entries(WB.parts.STACKS).map(([k, x]) => `<button class="btn small ${(e.stacks || []).includes(k) ? 'gold' : ''}" data-act="stack" data-s="${k}">${x.label}</button>`).join('')}</div>`, st.game.safeParts ? '🎮 PlayStation-safe: picks the strongest of this gun\'s <b>own</b> parts for your stats (other guns\' parts get deleted by the PS5).' : 'Tap one or more. Fills grip, sight, stock, both accessories (and the barrel, unless it\'s a legendary barrel) with the strongest parts for your picks, shared between them. Modded.') : ''}
           ${card('Manufacturer', `<select data-eset="manufacturer">${[...new Set(mfgs.concat(v.manufacturer ? [v.manufacturer] : []))].map((m) => `<option value="${esc(m)}" ${m === v.manufacturer ? 'selected' : ''}>${esc(last(m))}</option>`).join('')}</select>`, 'Changes who "made" it (affects some stats & looks).')}
         </div>
         <div class="group-title">Parts — tap one to swap it</div>
@@ -475,7 +479,7 @@
       <header><h3>Pick ${esc(WB.parts.slotLabel(p.slot, v.kind))}</h3><button class="x" data-act="closePick">✕</button></header>
       <div class="body">
         <div class="toolbar"><input type="search" placeholder="Search parts (e.g. recoil, damage, Jakobs)…" data-pset="q" value="${esc(p.q)}" autofocus>
-          <div class="seg"><button data-act="pickAll" data-v="0" class="${p.mode === 0 ? 'on' : ''}">Fits (${valid.length})</button><button data-act="pickAll" data-v="1" class="${p.mode === 1 ? 'on' : ''}">Any weapon</button>${nameSlot ? '' : `<button data-act="pickAll" data-v="2" class="${p.mode === 2 ? 'on' : ''}">Any slot ★</button>`}</div></div>
+          ${G.safeParts ? '<span class="chip">🎮 PS-safe: this gun\'s own parts only</span>' : `<div class="seg"><button data-act="pickAll" data-v="0" class="${p.mode === 0 ? 'on' : ''}">Fits (${valid.length})</button><button data-act="pickAll" data-v="1" class="${p.mode === 1 ? 'on' : ''}">Any weapon</button>${nameSlot ? '' : `<button data-act="pickAll" data-v="2" class="${p.mode === 2 ? 'on' : ''}">Any slot ★</button>`}</div>`}</div>
         ${p.mode === 1 ? '<div class="warn">Parts from other guns/items can look or act weird and may be flagged in online play. Fun for single player!</div>' : ''}
         ${p.mode === 2 ? '<div class="warn">★ Stack mode: put ANY part in this slot — e.g. a second damage accessory in the Sight or Stock slot — to pile up more bonuses. Very modded.</div>' : ''}
         ${hidden ? `<p class="muted" style="font-size:12px">${hidden} parts hidden — they come from a different DLC than this item's other parts, and the game can't mix those.</p>` : ''}

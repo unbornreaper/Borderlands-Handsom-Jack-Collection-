@@ -85,6 +85,7 @@
 
   function make(text, game, opts = {}) {
     const w = parse(text, game);
+    if (game.safeParts && w.modded) { w.modded = false; w.psSafe = true; }
     const cat = game.catalog();
     const notes = [];
     let pool;
@@ -132,7 +133,7 @@
     void slots;
     v.name = game.itemName(v); v.kind = game.kind(v); v.rarity = game.rarity(v);
 
-    const understood = [w.rarity, w.mfg, w.element, w.kind, ...w.stats, w.stack ? 'STACKED' : null, w.modded ? 'MODDED' : null, w.lookMfg ? 'looks: ' + w.lookMfg : null, w.level ? 'level ' + level : null].filter(Boolean);
+    const understood = [w.psSafe ? 'PS-safe (own parts only)' : null, w.rarity, w.mfg, w.element, w.kind, ...w.stats, w.stack ? 'STACKED' : null, w.modded ? 'MODDED' : null, w.lookMfg ? 'looks: ' + w.lookMfg : null, w.level ? 'level ' + level : null].filter(Boolean);
     return { view: v, wish: w, understood, notes, choices: pool.length };
   }
 

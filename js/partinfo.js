@@ -240,6 +240,7 @@
   // focus = which stat each slot should push in modded mode, so bonuses stack instead of repeating
   const FOCUS = { grip: '+Damage', sight: '+Crit damage', stock: '+Fire rate', accessory1: '+Damage', accessory2: '+Crit damage', elemental: '+Damage' };
   function makeOP(v, game, modded) {
+    if (game.safeParts) modded = false; // PlayStation deletes guns with other guns' parts
     const w = v.isWeapon;
     const slots = w ? WB.items.WEAPON_SLOTS : WB.items.ITEM_SLOTS;
     const valid = game.validParts(v);
@@ -284,6 +285,7 @@
     const stats = Array.isArray(stat) ? stat : [stat];
     const pools = game.pools.weapon;
     const all = [...new Set(['grip', 'sight', 'stock', 'accessory1', 'accessory2', 'barrel'].flatMap((s) => pools[s]))];
+    const valid = game.safeParts ? game.validParts(v) : null; // PlayStation: only this gun's own parts
     const statScore = (p, s, want) => {
       const d = describe(p, s, true, game); let x = 0;
       for (const t of d.tags) { const i = want.indexOf(t.t); if (i >= 0) x += 30 - i * 5; if (/^-/.test(t.t)) x -= 10; else if (!t.good) x -= 3; }
@@ -295,8 +297,8 @@
     slots.forEach((s, i) => {
       const want = STACKS[stats[i % stats.length]].tags;
       let best = null, bestSc = 0;
-      for (const p of all) { const x = statScore(p, s, want); if (x > bestSc && game.fits(v, s, p)) { best = p; bestSc = x; } }
-      if (best && bestSc >= 20) { v.parts[s] = best; filled++; }
+      for (const p of valid ? valid[s] || [] : all) { const x = statScore(p, s, want); if (x > bestSc && game.fits(v, s, p)) { best = p; bestSc = x; } }
+      if (best && bestSc >= (valid ? 1 : 20)) { if (best !== v.parts[s]) filled++; v.parts[s] = best; }
     });
     return filled;
   }

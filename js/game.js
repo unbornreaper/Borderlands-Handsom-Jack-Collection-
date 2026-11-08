@@ -194,6 +194,15 @@
       for (const s of w ? W_SLOTS : I_SLOTS) pairs.push([pg, s === slot ? path : v.parts[s]]);
       return this.chooseSet(pairs) !== null;
     }
+    // slots holding a part this item normally can't have (names excluded)
+    invalidSlots(v) {
+      const valid = this.validParts(v); const out = [];
+      for (const [slot, p] of Object.entries(v.parts)) {
+        if (!p || slot === 'prefix' || slot === 'title') continue;
+        if (valid[slot] && valid[slot].length && !valid[slot].includes(p)) out.push(slot);
+      }
+      return out;
+    }
     namePart(path, weapon) {
       if (!path) return null;
       const t = weapon ? this.D.weaponNames : this.D.itemNames;
@@ -359,6 +368,25 @@
           } catch (e) { /* leave unknown items alone */ }
         }
         if (fixed) notes.push(fixed + ' item' + (fixed > 1 ? 's' : '') + ' re-stored the PlayStation way (so they show up in game)');
+        let swapped = 0;
+        for (const x of this.root.f) {
+          if (x.n !== 53 && x.n !== 54 && x.n !== 41) continue;
+          const m = Msg.parse(x.v); const ser = m.get(1);
+          try {
+            if (WB.items.isExpansion(ser)) continue;
+            const v = this.game.view(ser); const bad = this.game.invalidSlots(v);
+            if (!bad.length) continue;
+            const valid = this.game.validParts(v);
+            for (const s of bad) {
+              const opts = valid[s].filter((p) => this.game.fits(v, s, p));
+              const sc = (p) => (WB.parts && WB.parts.score ? WB.parts.score(p, s, v.isWeapon, this.game) : 0);
+              v.parts[s] = opts.sort((a, b) => sc(b) - sc(a))[0] || valid[s][0];
+            }
+            this.game.autoPrefix(v); v.set = undefined; // let it fall back to the plain base-game set if it can
+            m.set(1, this.game.build(v, v.it.uid), 2); x.v = m.encode(); swapped++;
+          } catch (e) { /* leave it */ }
+        }
+        if (swapped) notes.push(swapped + ' modded item' + (swapped > 1 ? 's' : '') + ' given their own legit parts (PS5 deletes guns with other guns\' parts)');
       }
       if (sl.bank > 24 || (bm[8] || 0) > 9) { this.setBank(Math.min(24, sl.bank)); notes.push('bank size ' + sl.bank + ' → ' + this.slots.bank); }
       return notes;
