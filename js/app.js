@@ -22,7 +22,7 @@
   }
   async function getGame(key) {
     if (st.games[key]) return st.games[key];
-    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=9');
+    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=10');
     return (st.games[key] = new WB.Game(window.WB_DATA[key]));
   }
   async function openFile(file) {
@@ -386,6 +386,13 @@
   }
 
   /* ================= item editor modal ================= */
+  // keep the item's "game stage" the way this save stores it; untouched levels stay exactly as they were
+  function fixStage(e) {
+    const v = e.v;
+    if (e.base && e.base.level === v.level && e.base.stage !== undefined) v.stage = e.base.stage;
+    else st.model.applyStage(v);
+    return v;
+  }
   function statsCard(v, e) {
     const P = WB.parts.profile(v, st.game);
     const B = e.base ? WB.parts.profile(e.base, st.game) : null;
@@ -596,18 +603,18 @@
     pickPart(el) { st.edit.v.parts[st.picker.slot] = el.dataset.p || null; st.picker = null; renderModal(); },
     saveItem() {
       const e = st.edit;
-      if (mutate('Item updated', () => st.model.replaceSerial(e.entry, st.game.build(e.v, e.it ? e.it.uid : undefined)))) { st.edit = null; render(); }
+      if (mutate('Item updated', () => st.model.replaceSerial(e.entry, st.game.build(fixStage(e), e.it ? e.it.uid : undefined)))) { st.edit = null; render(); }
     },
     addItem(el) {
       const e = st.edit;
-      if (mutate('Added to ' + el.dataset.w + '!', () => st.model.addSerial(st.game.build(e.v, WB.randomUid()), el.dataset.w))) { st.edit = null; render(); }
+      if (mutate('Added to ' + el.dataset.w + '!', () => st.model.addSerial(st.game.build(fixStage(e), WB.randomUid()), el.dataset.w))) { st.edit = null; render(); }
     },
     delItem() { if (!confirm('Delete this item?')) return; const e = st.edit; if (mutate('Deleted', () => st.model.removeEntry(e.entry))) { st.edit = null; render(); } },
-    dupItem() { const e = st.edit; if (mutate('Duplicated', () => st.model.addSerial(st.game.build(e.v, WB.randomUid()), e.where))) { st.edit = null; render(); } },
+    dupItem() { const e = st.edit; if (mutate('Duplicated', () => st.model.addSerial(st.game.build(fixStage(e), WB.randomUid()), e.where))) { st.edit = null; render(); } },
     moveItem() { const e = st.edit; const to = e.where === 'bank' ? 'backpack' : 'bank'; if (mutate('Moved to ' + to, () => st.model.moveEntry(e.entry, to))) { st.edit = null; render(); } },
     favItem() { const e = st.edit; if (mutate('Updated', () => st.model.setMark(e.entry, e.entry.mark === 2 ? 1 : 2))) { st.edit = null; render(); } },
     copyCode() {
-      const ser = st.game.build(st.edit.v, 0);
+      const ser = st.game.build(fixStage(st.edit), 0);
       copy((bl2() ? 'BL2' : 'BLOZ') + '(' + WB.bytes.b64(ser) + ')');
     },
     pt(el) { st.missions.pt = +el.dataset.i; render(); },
@@ -628,7 +635,10 @@
         for (const line of txt.split(/\r?\n/)) {
           const m = line.trim().match(/^(BL2|BLOZ)\(([A-Za-z0-9+/=]+)\)$/); if (!m) { if (line.trim() && !line.trim().startsWith(';')) bad++; continue; }
           try {
-            const ser = WB.items.rekey(WB.bytes.unb64(m[2]), WB.randomUid());
+            let ser = WB.items.rekey(WB.bytes.unb64(m[2]), WB.randomUid());
+            const it = WB.items.decode(ser);
+            const want = st.model.stageZero ? 0 : it.grade;
+            if (it.grade > 1 && it.stage !== want) { it.stage = want; ser = WB.items.encode(it); }
             st.game.view(ser); st.model.addSerial(ser, where); ok++;
           } catch (e) { bad++; }
         }

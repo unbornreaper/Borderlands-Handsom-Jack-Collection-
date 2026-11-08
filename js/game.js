@@ -290,7 +290,7 @@
     }
   }
   function randomUid() { return (Math.random() * 0x100000000) >>> 0 || 1; }
-  function clampLevel(l) { l = Math.round(Number(l) || 1); return Math.max(0, Math.min(127, l)); }
+  function clampLevel(l) { l = Math.round(Number(l)); if (!Number.isFinite(l)) l = 1; return Math.max(0, Math.min(127, l)); }
   WB.Game = Game;
   WB.randomUid = randomUid;
 
@@ -324,7 +324,19 @@
       this.info = info; this.game = game; this.D = game.D;
       this.tps = game.key === 'tps';
       this._extractExpansion();
+      this.stageZero = this._detectStageZero();
     }
+    // PS4/PS5 saves keep the item's second level field ("game stage") at 0; PC saves copy the level.
+    // New and edited items must follow the save's own pattern or the game throws them away.
+    _detectStageZero() {
+      let zero = 0, total = 0;
+      for (const x of this.root.f) {
+        if (x.n !== 53 && x.n !== 54 && x.n !== 41) continue;
+        try { const it = WB.items.decode(Msg.parse(x.v).get(1)); if (it.grade > 1) { total++; if (it.stage === 0) zero++; } } catch (e) { /* skip */ }
+      }
+      return total > 0 ? zero * 2 > total : this.info.scheme === 'json';
+    }
+    applyStage(v) { v.stage = this.stageZero ? 0 : v.level; return v; }
     static detectGame(pb) {
       const m = Msg.parse(pb); const cls = m.str(1);
       const tps = ['GD_Gladiator', 'GD_Enforcer', 'GD_Lawbringer', 'GD_Prototype', 'Quince_Doppel', 'Crocus_Baroness'].some((p) => cls.startsWith(p));
@@ -542,7 +554,7 @@
         try {
           const it = WB.items.decode(ser);
           if (it.grade <= 1 && it.stage <= 1) continue; // level-1 items (skins etc.) stay as they are
-          it.grade = level; it.stage = level;
+          it.grade = level; it.stage = this.stageZero ? 0 : level;
           m.set(1, WB.items.encode(it), 2); x.v = m.encode();
         } catch (e) { /* leave unknown items alone */ }
       }
