@@ -22,7 +22,7 @@
   }
   async function getGame(key) {
     if (st.games[key]) return st.games[key];
-    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=11');
+    if (!(window.WB_DATA && window.WB_DATA[key])) await loadScript('data/' + key + '.js?v=12');
     return (st.games[key] = new WB.Game(window.WB_DATA[key]));
   }
   async function openFile(file) {
@@ -540,7 +540,7 @@
     maxMoney() { for (const [i, , , max] of CUR()) st.model.setCurrency(i, max); },
     maxLevel() { st.model.level = maxLevel(); st.model.xp = WB.XP[maxLevel() - 1]; if (bl2()) st.model.opLevel = 10; else st.model.playthroughs = 2; },
     maxSkills() { st.model.skills.forEach((s, i) => st.model.setSkillGrade(i, st.model.skillMax(s.name))); },
-    gearLevel() { st.model.setAllLevels(st.model.level + (bl2() ? st.model.opLevel : 0)); },
+    gearLevel() { st.model.setAllLevels(st.model.level + (bl2() && !st.model.stageZero ? st.model.opLevel : 0)); },
     maxAmmo() { const m = st.model; m.maxAmmo(); m.setBackpack(39); m.setBank(24); m.setWeaponSlots(4); },
     allTravel() { st.model.fastTravel = st.model.fastTravel.concat(st.model.allStations().map((s) => s.id)); },
     modes() { st.model.playthroughs = 2; if (bl2()) st.model.unlockSlaughterdome(); },
@@ -576,7 +576,7 @@
       if (!text.trim()) return toast('Type what you want first 🙂', true);
       st.forge.wish = text;
       try {
-        const lvl = Math.min(127, st.model.level + (bl2() ? st.model.opLevel : 0));
+        const lvl = Math.min(127, st.model.level + (bl2() && !st.model.stageZero ? st.model.opLevel : 0));
         const r = WB.wish.make(text, st.game, { level: lvl });
         openEditor(null, r.view, true); st.edit.wish = text; renderModal();
         toast('Understood: ' + (r.understood.join(' · ') || 'something cool') + (r.notes.length ? '  ' + r.notes.join(' ') : '') + (r.choices > 1 ? `  (🎲 ${r.choices} matches — Re-roll for another)` : ''));
@@ -595,7 +595,7 @@
     pickAll(el) { st.picker.mode = +el.dataset.v; renderModal(); },
     makeOP(el) {
       const v = st.edit.v; const modded = el.dataset.m === '1';
-      const lvl = Math.min(127, st.model.level + (bl2() ? st.model.opLevel : 0));
+      const lvl = Math.min(127, st.model.level + (bl2() && !st.model.stageZero ? st.model.opLevel : 0));
       v.level = lvl; v.stage = lvl;
       WB.parts.makeOP(v, st.game, modded);
       st.game.autoPrefix(v);

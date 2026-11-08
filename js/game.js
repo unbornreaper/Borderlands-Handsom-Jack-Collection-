@@ -335,13 +335,31 @@
         if (x.n !== 53 && x.n !== 54 && x.n !== 41) continue;
         try { const it = WB.items.decode(Msg.parse(x.v).get(1)); if (it.grade > 1) { total++; if (it.stage === 0) zero++; } } catch (e) { /* skip */ }
       }
-      return total > 0 ? zero * 2 > total : this.info.scheme === 'json';
+      if (this.info.scheme === 'json') return true; // PlayStation: always stage 0 (game drops items otherwise)
+      return total > 0 ? zero * 2 > total : false;
     }
     // fix values left by older versions of the editor that break the game
     _repairLimits() {
       const notes = [];
       const sl = this.slots, bm = this.root.packed(36);
       if (sl.backpack > 39 || (bm[7] || 0) > 9) { this.setBackpack(Math.min(39, sl.backpack)); notes.push('backpack size ' + sl.backpack + ' → ' + this.slots.backpack); }
+      if (this.stageZero) {
+        // PlayStation: items with a non-zero game stage, or above the character's level, vanish in game
+        let fixed = 0; const cap = this.level;
+        for (const x of this.root.f) {
+          if (x.n !== 53 && x.n !== 54 && x.n !== 41) continue;
+          const m = Msg.parse(x.v); const ser = m.get(1);
+          try {
+            if (WB.items.isExpansion(ser)) continue;
+            const it = WB.items.decode(ser);
+            if (it.stage === 0 && it.grade <= cap) continue;
+            if (it.grade <= 1 && it.stage <= 1) continue; // skins/level-1 items are stored that way by the game
+            it.stage = 0; it.grade = Math.min(it.grade, cap);
+            m.set(1, WB.items.encode(it), 2); x.v = m.encode(); fixed++;
+          } catch (e) { /* leave unknown items alone */ }
+        }
+        if (fixed) notes.push(fixed + ' item' + (fixed > 1 ? 's' : '') + ' re-stored the PlayStation way (so they show up in game)');
+      }
       if (sl.bank > 24 || (bm[8] || 0) > 9) { this.setBank(Math.min(24, sl.bank)); notes.push('bank size ' + sl.bank + ' → ' + this.slots.bank); }
       return notes;
     }
